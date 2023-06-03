@@ -1,4 +1,4 @@
-# Web vpython 3.2
+#Web vpython 3.2
 from vpython import *
 
 def on_keydown(event):
@@ -98,31 +98,46 @@ def Collision_Tri(tri):
     RYmax = player.pos.y + player.size.y/2
     if cnty[0] > RYmax or cnty[2] < RYmin:
         return False
-    if tri.l == 1:
-        j = (RXmin - tri.line[0].x) * (RXmin - tri.line[1].x)
+    
+    if tri.IsReverse:
+        j2 = player.pos.y < tri.line[0].y
+        if tri.l > 0:
+            j = RXmin >= tri.line[0].x and RXmax <= tri.line[1].x
+        else:
+            j = RXmin >= tri.line[1].x and RXmax <= tri.line[0].x
     else:
-        j = (RXmax - tri.line[0].x) * (RXmax - tri.line[1].x)
-    if player.pos.y > tri.line[0].y and j < 0:
-        k = abs(player.pos.x * tri.l + player.pos.y - tri.c) / sqrt(player.pos.x ** 2 + player.pos.y ** 2)
-        if k > 0.25 - 0.05 * tri.l:
+        j2 = player.pos.y > tri.line[0].y
+        j = True
+        
+    if j2 and j:
+        k = abs(-player.pos.x * tri.l + player.pos.y - tri.c) / sqrt(player.pos.x ** 2 + player.pos.y ** 2)
+        if k > 0.005:
             return False
+        if player.v.y > 0:
+            player.v.x = -player.v.x
+            player.v.y = -1
+            return True
         ang = diff_angle(tri.line[1] - tri.line[0],vec(1,0,0))
         grav = norm(tri.line[0] - tri.line[1]) * sin(ang) * 9.8
         player.rotate(angle = ang,axis = vec(0,0,1))
-        player.v = vec(0,0,0)
+        if player.dx * tri.l > 0:
+            player.dx = -1
+            player.v = vec(0,0,0)
+        else:
+            player.dx = 1
+            player.v = vec(player.v.x,player.v.x * grav.y / grav.x,0)
         while player.pos.y > tri.line[0].y:
             rate(1/dt)
             player.v = player.v + grav * dt
             player.pos = player.pos + player.v * dt
         player.rotate(angle = -ang,axis = vec(0,0,1))
     else:
-        player.pos.y = player.pos.y - 0.1
         player.v.x = -player.v.x
-        player.v.y = 0
+        player.v.y = -1
     return True
 
 def BoxInit(x,y,sx,sy,cl,fr,st):
-    a = box(pos = vec(x,y+st*30,0), size = vec(sx,sy,0.1), color = cl)
+    a = box(pos = vec(x,y+st*30,0), size = vec(sx,sy,0.001), color = cl)
     a.friction = fr
     a.type = 0
     return a
@@ -133,26 +148,34 @@ def TriInit(a,b,c,cl,st):
     cv = vertex(pos = c + vec(0,st*30,0),color = cl)
     d = triangle(v0 = av, v1 = bv, v2 = cv)
     d.type = 1
+    d.IsReverse = False
     if dot(norm(b-a),vec(1,0,0)) % 1 != 0:
-        d.line = [a,b]
+        d.line = [av.pos,bv.pos]
+        left = cv.pos
     elif dot(norm(c-a),vec(1,0,0)) %1 != 0:
-        d.line = [a,c]
+        d.line = [av.pos,cv.pos]
+        left = bv.pos
     else:
-        d.line = [b,c]
+        d.line = [bv.pos,cv.pos]
+        left = av.pos
     
     if d.line[0].y > d.line[1].y:
         s = d.line[0]
         d.line[0] = d.line[1]
         d.line[1] = s
-    if d.line[0].x > d.line[1].x:
-        d.c = d.line[0].x + d.line[0].y
-        d.l = 1
-    else:
-        d.c = d.line[0].y - d.line[0].x
-        d.l = -1
+        
+    if d.line[0].y < left.y or d.line[1].y < left.y:
+        d.Isreverse = True
+        
+    d.l = (d.line[1].y - d.line[0].y) / (d.line[1].x - d.line[0].x)
+    d.c = d.line[0].y - d.l * d.line[0].x
+    
     return d
 
 def StageChange(ch):
+    if player.CurStage == len(Stages)-1 and ch == 1:
+        print("Clear")
+        return
     player.CurStage = player.CurStage + ch
     scene.center = vec(0,player.CurStage * 30,0)
     scene.background = StageBG[player.CurStage]
@@ -163,8 +186,8 @@ def StageChange(ch):
 def RGB(r,g,b):
     return vec(r/255,g/255,b/255)
 
-scene.width = 800
-scene.height = 600
+scene.width = 1600
+scene.height = 1200
 scene.center = vec(0,0,0)
 scene.range = 15
 
@@ -173,29 +196,44 @@ c1 = RGB(30,26,23)
 c2 = RGB(85,105,62)
 c3 = RGB(66,66,64)
 c4 = RGB(64,35,31)
+c5 = RGB(41,66,67)
+c6 = RGB(56,42,48)
 
 CurObjects = [BoxInit(20.5,0,1,1000,color.black,0,0),BoxInit(-20.5,0,1,1000,color.white,0,0)]
-StageBG = [RGB(71,102,66),RGB(71,102,66),RGB(110,149,166),RGB(110,149,166),RGB(110,149,166)]
+StageBG = [RGB(71,102,66),RGB(71,102,66),RGB(110,149,166),RGB(110,149,166),RGB(110,149,166),RGB(56,53,53),RGB(56,53,53)]
 
 Stage1 = [BoxInit(0,-14.5,40,2,c1,0,0),BoxInit(15,-7,10,14,c1,0,0),BoxInit(-15,-7,10,14,c1,0,0),BoxInit(0,10,10,4,c0,0,0)]
 Stage2 = [BoxInit(9,-12,10,3,c0,0,1),BoxInit(18,-4,4,3,c0,0,1),BoxInit(4,-4,6,3,c0,0,1),BoxInit(-8,2,6,6,c0,0,1),BoxInit(-17,4,6,8,c0,0,1)]
 Stage3 = [BoxInit(0,-12,4,1.5,c2,0,2),BoxInit(9,-12,5,1.5,c2,0,2),BoxInit(18.5,-8,3,1.5,c2,0,2),BoxInit(1,-6,10,3,c0,0,2),BoxInit(8,-5.5,4,4,c0,0,2)]
 Stage3.extend([BoxInit(-5,3,5,4,c0,0,2),BoxInit(-17.5,7,5,1.5,c2,0,2),BoxInit(-7,14,6,2,c0,0,2)])
-Stage4 = [BoxInit(-7,-13.5,6,3,c0,0,3),BoxInit(-7,-2,6,2,c3,0,3),BoxInit(-18,-2,4,2,c2,0,3), BoxInit(4.25,0,2.5,6,c3,0,3)]
-Stage4.extend([BoxInit(6,3.5,1,13,c3,0,3),BoxInit(-8,6,1.5,6,c3,0,3),BoxInit(-9.25,9,1,12,c3,0,3)])
-Stage5 = [BoxInit(-9.5,-13.5,3,3,c3,0,4),BoxInit(7,-13.5,2.5,3,c3,0,4),BoxInit(7,-8,2.5,1,c4,0,4),BoxInit(19.5,0,1,1.5,c4,0,4)]
+Stage4 = [BoxInit(-7,-13.5,6,3,c0,0,3),BoxInit(-7,-2,6,2,c3,0,3),BoxInit(-18,-2,4,2,c2,0,3), BoxInit(8.25,0,2.5,6,c3,0,3)]
+Stage4.extend([BoxInit(10,3.5,1,13,c3,0,3),BoxInit(-8,6,1.5,6,c3,0,3),BoxInit(-9.25,9,1,12,c3,0,3)])
+Stage5 = [BoxInit(-9.5,-13.5,3,3,c3,0,4),BoxInit(11,-13.5,2.5,3,c3,0,4),BoxInit(11,-7,2.5,1,c4,0,4),BoxInit(19,0,2,2,c4,0,4),BoxInit(6,8,2.75,1,c4,0,4)]
+Stage5.extend([BoxInit(0,9.5,2.75,1,c4,0,4),BoxInit(-6,11,2.75,1,c4,0,4),BoxInit(0,14.5,16,1,c4,0,4),BoxInit(-15,7,2.75,1,c4,0,4)])
+Stage6 = [BoxInit(0,-13,16,4,c4,0,5),BoxInit(12.5,1,15,12,c5,0,5),BoxInit(-8,-4.75,4,1.5,c5,0,5),BoxInit(-18,0,4,1.5,c5,0,5),BoxInit(-14.5,7,3,4,c5,0,5)]
+Stage6.extend([BoxInit(-12,14.25,16,1.5,c5,0,5),BoxInit(-8.5,5.75,9,1.5,c5,0,5),BoxInit(10.5,13.5,11,3,c5,0,5)])
+Stage7 = [BoxInit(8,-8.5,6,13,c5,0,6),BoxInit(13.5,-14.25,5,1.5,c5,0,6),BoxInit(13.5,-2.75,5,1.5,c5,0,6),BoxInit(16,10,8,10,c5,0,6),TriInit(vec(12,14,0),vec(12,5,0),vec(5,5,0),c5,6)]
+Stage7.extend([BoxInit(-3,10,6,10,c5,0,6),BoxInit(-5.5,-6,5,1.5,c6,0,6),TriInit(vec(-4,-15,0),vec(-11,-15,0),vec(-11,-8,0),c5,6),TriInit(vec(-11,-6,0),vec(-18.5,-6,0),vec(-18.5,2,0),c5,6)])
+
+Stage8 = []
 g = vec(0,-15,0)
+
+
+def process():
+    global TE
+    TE = False
 
 scene.bind("keydown",on_keydown)
 scene.bind("keyup",on_keyup)
+scene.bind('click keydown', process)
 
-Stages = [Stage1,Stage2,Stage3,Stage4,Stage5]
+Stages = [Stage1,Stage2,Stage3,Stage4,Stage5,Stage6,Stage7,Stage8]
 
 player = box(pos = vec(0,-12.8,0), size = vec(1,1,0.01), color = color.white)
 player.v = vec(0,0,0)
 player.dx = 1
 player.WaitForJump = False
-player.IsJump = False
+player.IsJump = True
 player.JumpP = 0
 player.JumpPMax = 20
 player.MoveVert = False
@@ -205,18 +243,10 @@ player.CurStage = 0
 dt = 0.01
 t = 0
 DJ = DetectCollision()
-StageChange(4)
+StageChange(6)
 
-while True:
-    rate(100)
-
-    # player.pos = scene.mouse.pos
-
-    # if player.pos.y > 15 + 30 * player.CurStage:
-    #     StageChange(1)
-    # elif player.pos.y < -15 + 30 * player.CurStage:
-    #     StageChange(-1)
-    
+def Normal():
+    global DJ
     if player.MoveVert or player.IsJump:
         DJ = DetectCollision()
         
@@ -233,10 +263,23 @@ while True:
     
     if player.MoveVert:
         player.pos.x = player.pos.x + dt * player.dx * 10
-    
+
     if not DJ and player.OnLand:
         player.OnLand = False
         player.IsJump = True
         player.color = color.red
         player.MoveVert = False
+
+def test():
+    player.pos = scene.mouse.pos
+
+TE = True
+    
+
+while True:
+    rate(100)
+    if TE:
+        test()
+    else:
+        Normal()
 
