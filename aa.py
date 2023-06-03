@@ -69,7 +69,7 @@ def Collision_Box(Object):
             player.pos.x = Object.pos.x - (Object.size.x + player.size.x * 1.4) * 0.5 * player.dx
             
     else:
-        if player.v.y <0:
+        if player.pos.y > Object.pos.y:
             player.pos.y = Object.pos.y + (Object.size.y+player.size.y) * 0.5
             player.IsJump = False
             player.OnLand = True
@@ -121,8 +121,9 @@ def Collision_Tri(tri):
         player.v.y = 0
     return True
 
-def BoxInit(x,y,sx,sy,cl,st):
+def BoxInit(x,y,sx,sy,cl,fr,st):
     a = box(pos = vec(x,y+st*30,0), size = vec(sx,sy,0.1), color = cl)
+    a.friction = fr
     a.type = 0
     return a
 
@@ -171,21 +172,24 @@ c0 = RGB(22,47,16)
 c1 = RGB(30,26,23)
 c2 = RGB(85,105,62)
 c3 = RGB(66,66,64)
+c4 = RGB(64,35,31)
 
-CurObjects = [BoxInit(20.5,0,1,1000,color.black,0),BoxInit(-20.5,0,1,1000,color.white,0)]
-StageBG = [RGB(71,102,66),RGB(71,102,66),RGB(110,149,166),RGB(110,149,166),RGB(85,51,51)]
+CurObjects = [BoxInit(20.5,0,1,1000,color.black,0,0),BoxInit(-20.5,0,1,1000,color.white,0,0)]
+StageBG = [RGB(71,102,66),RGB(71,102,66),RGB(110,149,166),RGB(110,149,166),RGB(110,149,166)]
 
-Stage1 = [BoxInit(0,-14.5,40,2,c1,0),BoxInit(15,-7,10,14,c1,0),BoxInit(-15,-7,10,14,c1,0),BoxInit(0,10,10,4,c0,0)]
-Stage2 = [BoxInit(9,-12,10,3,c0,1),BoxInit(18,-4,4,3,c0,1),BoxInit(4,-4,6,3,c0,1),BoxInit(-8,2,6,6,c0,1),BoxInit(-17,4,6,8,c0,1)]
-Stage3 = [BoxInit(0,-12,4,1.5,c2,2),BoxInit(9,-12,5,1.5,c2,2),BoxInit(18.5,-8,3,1.5,c2,2),BoxInit(1,-6,10,3,c0,2),BoxInit(8,-5.5,4,4,c0,2)]
-Stage3.extend([BoxInit(-5,3,5,4,c0,2),BoxInit(-17.5,7,5,1.5,c2,2),BoxInit(-7,14,6,2,c0,2)])
-Stage4 = [BoxInit(-7,-13.5,6,3,c0,3),BoxInit(-7,-2,6,1.5,c3,3),BoxInit(-18,-2,4,1.5,c2,3)]
+Stage1 = [BoxInit(0,-14.5,40,2,c1,0,0),BoxInit(15,-7,10,14,c1,0,0),BoxInit(-15,-7,10,14,c1,0,0),BoxInit(0,10,10,4,c0,0,0)]
+Stage2 = [BoxInit(9,-12,10,3,c0,0,1),BoxInit(18,-4,4,3,c0,0,1),BoxInit(4,-4,6,3,c0,0,1),BoxInit(-8,2,6,6,c0,0,1),BoxInit(-17,4,6,8,c0,0,1)]
+Stage3 = [BoxInit(0,-12,4,1.5,c2,0,2),BoxInit(9,-12,5,1.5,c2,0,2),BoxInit(18.5,-8,3,1.5,c2,0,2),BoxInit(1,-6,10,3,c0,0,2),BoxInit(8,-5.5,4,4,c0,0,2)]
+Stage3.extend([BoxInit(-5,3,5,4,c0,0,2),BoxInit(-17.5,7,5,1.5,c2,0,2),BoxInit(-7,14,6,2,c0,0,2)])
+Stage4 = [BoxInit(-7,-13.5,6,3,c0,0,3),BoxInit(-7,-2,6,2,c3,0,3),BoxInit(-18,-2,4,2,c2,0,3), BoxInit(4.25,0,2.5,6,c3,0,3)]
+Stage4.extend([BoxInit(6,3.5,1,13,c3,0,3),BoxInit(-8,6,1.5,6,c3,0,3),BoxInit(-9.25,9,1,12,c3,0,3)])
+Stage5 = [BoxInit(-9.5,-13.5,3,3,c3,0,4),BoxInit(7,-13.5,2.5,3,c3,0,4),BoxInit(7,-8,2.5,1,c4,0,4),BoxInit(19.5,0,1,1.5,c4,0,4)]
 g = vec(0,-15,0)
 
 scene.bind("keydown",on_keydown)
 scene.bind("keyup",on_keyup)
 
-Stages = [Stage1,Stage2,Stage3,Stage4]
+Stages = [Stage1,Stage2,Stage3,Stage4,Stage5]
 
 player = box(pos = vec(0,-12.8,0), size = vec(1,1,0.01), color = color.white)
 player.v = vec(0,0,0)
@@ -201,13 +205,10 @@ player.CurStage = 0
 dt = 0.01
 t = 0
 DJ = DetectCollision()
-StageChange(0)
-
-def Test():
-    print("!")
+StageChange(4)
 
 while True:
-    rate(1/dt)
+    rate(100)
 
     # player.pos = scene.mouse.pos
 
